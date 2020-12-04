@@ -10,5 +10,5 @@ CREATE TABLE quotes(
 );
 CREATE TABLE tags( 
    quote_id INTEGER,    
-   tags varchar(32)
+   tag varchar(50)
 );

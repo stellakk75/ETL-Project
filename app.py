@@ -26,11 +26,11 @@ app.config['JSON_SORT_KEYS'] = False
 
 # Database Setup
 connection = psycopg2.connect(user = "postgres",
-                                  password = "postgres",
+                                  password = "Isla",
                                   host = "127.0.0.1",
                                   port = "5432",
                                   database = "quotes_db")
-db_string = "postgres://postgres:postgres@localhost:5432/quotes_db"
+db_string = "postgres://postgres:Isla@localhost:5432/quotes_db"
 engine = connection.cursor()
 db = create_engine(db_string)
 
@@ -67,6 +67,20 @@ def quotes():
      }
     quotes_dict.append(data)    
     return jsonify(quotes_dict)
+
+@app.route("/authors/<author name>")
+def author_name():
+    engine.execute("SELECT COUNT(*) FROM author;")
+    total_cnt = engine.fetchone()  
+    authors_all_df = pd.read_sql_query(
+        '''SELECT author.quote_id,quotes.author_name,author.dob,tags.tag \
+                    FROM quotes \
+                    JOIN \
+                    tags ON quotes.quote_id = tags.quote_id \
+                    ORDER BY quotes.quote_id''',db
+                                    )    
+
+
 @app.route("/top10tags")
 def top10tags():
     top10tags_df = pd.read_sql_query(
@@ -91,6 +105,8 @@ def top10tags():
         }
         top10.append(data)
     return jsonify(top10)
+
+
 
 
 if __name__ == "__main__":

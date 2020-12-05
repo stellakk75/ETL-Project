@@ -21,6 +21,7 @@ from flask import Flask, jsonify
 # Flask Setup
 #################################################
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
 #################################################
 
 # Database Setup
@@ -55,8 +56,23 @@ def top10tags():
                        GROUP BY tag \
                        ORDER BY count(*) DESC LIMIT 10
                    ''' , db
-                                    )      
-    return jsonify(top10tags_df.values.tolist())
+                                    )  
+    i = 0
+    cnt = 0
+    tags_dict = {}
+    top10 = []
+    for i in range(len(top10tags_df.to_dict('split')['data'])):
+        top_dict = {}
+        tags = top10tags_df.to_dict('split')['data'][i][0]
+        cnt =  top10tags_df.to_dict('split')['data'][i][1]
+
+        data = {
+            
+            'tags' : tags,
+            'quote_count' : cnt
+        }
+        top10.append(data)
+    return jsonify(top10)
 
 
 if __name__ == "__main__":

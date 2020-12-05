@@ -68,17 +68,26 @@ def quotes():
     quotes_dict.append(data)    
     return jsonify(quotes_dict)
 
-@app.route("/authors/<author name>")
+@app.route("/authors")
 def author_name():
     engine.execute("SELECT COUNT(*) FROM author;")
-    total_cnt = engine.fetchone()  
+    total_author_cnt = engine.fetchone()  
     authors_all_df = pd.read_sql_query(
-        '''SELECT author.quote_id,quotes.author_name,author.dob,tags.tag \
-                    FROM quotes \
-                    JOIN \
-                    tags ON quotes.quote_id = tags.quote_id \
-                    ORDER BY quotes.quote_id''',db
-                                    )    
+        '''SELECT author.author_name,author.dob AS born,
+                  author.description,
+	              (SELECT COUNT(*) FROM quotes
+		           WHERE quotes.author_name = author.author_name) AS quote_count	
+           FROM author
+           ORDER BY 1
+        ''',db
+                                    ) 
+#Query to pull author quotes
+#   author_quotes_df = pd.read_sql_query(
+                        '''
+                        SELECT author_name,quotes
+                        FROM quotes
+                        ORDER BY author_name 
+                        ,db''')   
 
 
 @app.route("/top10tags")

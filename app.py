@@ -38,7 +38,7 @@ db = create_engine(db_string)
 @app.route("/quotes")
 def quotes():
     engine.execute("SELECT COUNT(*) FROM quotes;")
-    total_tags = engine.fetchone()  
+    total_cnt = engine.fetchone()  
     quotes_all_df = pd.read_sql_query(
         '''SELECT quotes.quote_id,quotes.author_name,quotes.quote,tags.tag \
                     FROM quotes \
@@ -47,8 +47,26 @@ def quotes():
                     ORDER BY quotes.quote_id''',db
                                     )
     
-
-    return jsonify(quotes_all_df.values.tolist())
+    xx = quotes_all_df.groupby(['quote_id','author_name','quote']).tag.apply(list).reset_index()
+    quotes_list = []
+    i = 0
+    for i in range(len(xx.to_dict('split')['data'])):
+        author_name = xx.to_dict('split')['data'][i][1]
+        quote =  xx.to_dict('split')['data'][i][2]
+        tags = xx.to_dict('split')['data'][i][3]
+        data = {
+            'text' : quote,
+            'author name' : author_name,
+            'tags' : tags
+        }
+        quotes_list.append(data)
+    quotes_dict =[]
+    data = {
+    'total' :total_cnt,
+    'quotes':quotes_list
+     }
+    quotes_dict.append(data)    
+    return jsonify(quotes_dict)
 @app.route("/top10tags")
 def top10tags():
     top10tags_df = pd.read_sql_query(

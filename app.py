@@ -26,11 +26,11 @@ app.config['JSON_SORT_KEYS'] = False
 
 # Database Setup
 connection = psycopg2.connect(user = "postgres",
-                                  password = "Isla",
+                                  password = "postgres",
                                   host = "127.0.0.1",
                                   port = "5432",
                                   database = "quotes_db")
-db_string = "postgres://postgres:Isla@localhost:5432/quotes_db"
+db_string = "postgres://postgres:postgres@localhost:5432/quotes_db"
 engine = connection.cursor()
 db = create_engine(db_string)
 
@@ -69,27 +69,100 @@ def quotes():
     return jsonify(quotes_dict)
 
 @app.route("/authors")
-def author_name():
-    engine.execute("SELECT COUNT(*) FROM author;")
-    total_author_cnt = engine.fetchone()  
-    authors_all_df = pd.read_sql_query(
-        '''SELECT author.author_name,author.dob AS born,
-                  author.description,
-	              (SELECT COUNT(*) FROM quotes
-		           WHERE quotes.author_name = author.author_name) AS quote_count	
-           FROM author
-           ORDER BY 1
-        ''',db
-                                    ) 
-#Query to pull author quotes
-#   author_quotes_df = pd.read_sql_query(
-                        '''
-                        SELECT author_name,quotes
-                        FROM quotes
-                        ORDER BY author_name 
-                        ,db''')   
+def authors():
+    quotes_author_df = pd.read_sql_query('''
+                            SELECT author.author_name,author.description,author.dob,
+                                  (SELECT COUNT(*) FROM quotes
+                                   WHERE quotes.author_name = author.author_name),
+                                  quotes.quote,tags.tag,quotes.quote_id
+                            FROM author
+                            JOIN quotes
+                            ON author.author_name=quotes.author_name
+                            JOIN tags
+                            ON tags.quote_id = quotes.quote_id
+                            ORDER BY author.author_name
+                                    ''',db
+                                     )
+    total_author_df = pd.read_sql_query(
+                            '''SELECT COUNT(*) FROM  author''',db)
+    total = total_author_df.values.tolist()                        
+    xx = quotes_author_df.groupby(['quote_id','author_name','description',
+                               'dob','count','quote']).tag.apply(list).reset_index()
+    xx.sort_values(by=['author_name'], inplace=True)
+    quotes_authos_temp = xx.to_dict('split')['data']
+    quotes_author_list = []
+    full_author_list = []
+    previous_author_name =''
+    previous_flag = False
+    first_iteration = True
+    quotes_list = []
+    quotes_tags = []
 
+    for i in range(len(xx.to_dict('split')['data'])):
+        new_quote_id = quotes_authos_temp[i][0]
+        new_author_name = quotes_authos_temp[i][1]
+        new_born = quotes_authos_temp[i][3]
+        new_description =  quotes_authos_temp[i][2]
+        new_count = quotes_authos_temp[i][4]
+        new_quotes = quotes_authos_temp[i][5]
+        new_tags = quotes_authos_temp[i][6]
+        author_name = new_author_name
+        if first_iteration:
+                author_name = quotes_authos_temp[i][1]
+                born = quotes_authos_temp[i][3]
+                description =  quotes_authos_temp[i][2]
+                count = quotes_authos_temp[i][4]
+                quotes = quotes_authos_temp[i][5]
+                tags = quotes_authos_temp[i][6]
+                #quotes_list.append(new_quotes)
+                #quotes_tags.append(new_tags)
+                quote_text = {
+                    'text':new_quotes,
+                    'tags':new_tags
+                            }
+                quotes_list.append(quote_text)
+                data = {
+                    'born' : born,
+                    'name' : previous_author_name,
+                    'description' : description,
+                    'count' : count,
+                    'quotes':quote_text}
+                previous_author_name = author_name
+                first_iteration = False
+                #print('First Iteration')
 
+        else:
+            if author_name == previous_author_name:
+                        quote_text = {
+                            'text':new_quotes,
+                            'tags':new_tags
+                            }
+                        quotes_list.append(quote_text)
+                        
+                    
+                #print('Appending same author_name Qote')
+            else:
+                
+                data = {
+                    'born' : born,
+                    'name' : previous_author_name,
+                    'description' : description,
+                    'count' : count,
+                    'quotes':quotes_list
+                }
+                quotes_author_list.append(data)
+                quotes_list = []
+                quotes_tags = []
+                #quotes_tags.append(tags)
+                #quotes_list.append(new_quotes)
+                previous_author_name = author_name
+                #print('appending new autor name')
+    data = {
+        'total': total,
+        'details': quotes_author_list
+            }
+    full_author_list.append(data)
+    return jsonify(full_author_list)
 @app.route("/top10tags")
 def top10tags():
     top10tags_df = pd.read_sql_query(

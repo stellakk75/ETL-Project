@@ -163,6 +163,62 @@ def authors():
             }
     full_author_list.append(data)
     return jsonify(full_author_list)
+@app.route("/tags")
+def tags():
+    #Define DataFrame from db query
+    quotes_tags_df = pd.read_sql_query(
+                    '''
+                   SELECT quotes.quote_id, quotes.quote,tags.tag
+                   FROM  quotes
+                   JOIN tags
+                   ON tags.quote_id = quotes.quote_id
+                    ''', db           )
+    #Define unique tags from db
+    unique_tags_df = pd.read_sql_query('''SELECT DISTINCT tag FROM tags''',db)
+    unique_tags_df_list = unique_tags_df.values.tolist()
+    #Define in iterable format
+    xx = quotes_tags_df.groupby(['quote_id','quote']).tag.apply(list).reset_index()
+    tags_quote_temp = xx.to_dict('split')['data']
+    #Loop through to extract the requested data and initialize list
+    quote_list = []
+    tag_list = []
+    quote_tags = []
+    quote_tags_details = []
+    full_tags_details = []
+    total_tags_count = 0
+    quote_count = 0
+    first_iteration = True
+    quote_cnt = 0
+    previous_quote_id = 0
+    for j in unique_tags_df_list:
+        #Pick tag and loop through to check all tags and collect quote data
+        quote_list = []
+        tag_list = []
+        quote_count = 0
+        quote_cnt = 0
+        quote_tags= []
+        total_tags_count = total_tags_count + 1
+        for i in range(len(xx.to_dict('split')['data'])):
+            quote_id = tags_quote_temp[i][0]
+            quote = tags_quote_temp[i][1]
+            tag = tags_quote_temp[i][2]
+            if j[0] in tag:
+                quote_cnt = quote_cnt + 1
+                #print(f'{j[0]} matched in {tag}')
+                data = {
+                'text': quote,
+                'tags':tag}
+                quote_tags.append(data)
+        data = {'name':j,
+        'number_of_quotes':quote_cnt,
+        'quotes':quote_tags}
+        quote_tags_details.append(data)
+    data = {'count' : total_tags_count,
+       'details':quote_tags_details}
+
+    full_tags_details.append(data)   
+
+    return jsonify(results = full_tags_details)  
 @app.route("/top10tags")
 def top10tags():
     top10tags_df = pd.read_sql_query(

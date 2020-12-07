@@ -26,15 +26,27 @@ app.config['JSON_SORT_KEYS'] = False
 
 # Database Setup
 connection = psycopg2.connect(user = "postgres",
-                                  password = "postgres",
+                                  password = "Isla",
                                   host = "127.0.0.1",
                                   port = "5432",
                                   database = "quotes_db")
-db_string = "postgres://postgres:postgres@localhost:5432/quotes_db"
+db_string = "postgres://postgres:Isla@localhost:5432/quotes_db"
 engine = connection.cursor()
 db = create_engine(db_string)
 
+#Home API for available routes 
+@app.route("/")
+def welcomeHome():
+    """List of all available api routes."""
+    return (
+        f"Welcome! Below is a list of all available routes:<br/>"       
+        f"/api/v1.0/quotes<br/>"   
+        f"/api/v1.0/authors<br/>"  
+        f"/api/v1.0/tags<br/>"     
+        f"/api/v1.0//top10tags<br/>"
+    )
 
+#Displays total # of quotes with each quote and associated author and tags
 @app.route("/quotes")
 def quotes():
     engine.execute("SELECT COUNT(*) FROM quotes;")
@@ -68,6 +80,7 @@ def quotes():
     quotes_dict.append(data)    
     return jsonify(quotes_dict)
 
+#Displays total number of authors with details of each other and all the author's quotes with associated tags
 @app.route("/authors")
 def authors():
     quotes_author_df = pd.read_sql_query('''
@@ -114,22 +127,20 @@ def authors():
                 count = quotes_authos_temp[i][4]
                 quotes = quotes_authos_temp[i][5]
                 tags = quotes_authos_temp[i][6]
-                #quotes_list.append(new_quotes)
-                #quotes_tags.append(new_tags)
                 quote_text = {
                     'text':new_quotes,
                     'tags':new_tags
                             }
                 quotes_list.append(quote_text)
                 data = {
-                    'born' : born,
                     'name' : previous_author_name,
                     'description' : description,
+                    'born' : born,
                     'count' : count,
-                    'quotes':quote_text}
+                    'quotes':quote_text
+                    }
                 previous_author_name = author_name
                 first_iteration = False
-                #print('First Iteration')
 
         else:
             if author_name == previous_author_name:
@@ -139,30 +150,28 @@ def authors():
                             }
                         quotes_list.append(quote_text)
                         
-                    
-                #print('Appending same author_name Qote')
             else:
-                
                 data = {
-                    'born' : born,
                     'name' : previous_author_name,
                     'description' : description,
+                    'born' : born,
                     'count' : count,
                     'quotes':quotes_list
                 }
                 quotes_author_list.append(data)
                 quotes_list = []
                 quotes_tags = []
-                #quotes_tags.append(tags)
-                #quotes_list.append(new_quotes)
                 previous_author_name = author_name
-                #print('appending new autor name')
+
     data = {
-        'total': total,
+        'total number of authors': total,
         'details': quotes_author_list
             }
     full_author_list.append(data)
     return jsonify(full_author_list)
+
+#Displays total # of tags with details of each tag including # of quotes it appears in 
+# and the all the quotes with the tag and the other associated tags 
 @app.route("/tags")
 def tags():
     #Define DataFrame from db query
@@ -191,7 +200,7 @@ def tags():
     quote_cnt = 0
     previous_quote_id = 0
     for j in unique_tags_df_list:
-        #Pick tag and loop through to check all tags and collect quote data
+        # Pick tag and loop through to check all tags and collect quote data
         quote_list = []
         tag_list = []
         quote_count = 0
@@ -219,6 +228,8 @@ def tags():
     full_tags_details.append(data)   
 
     return jsonify(results = full_tags_details)  
+
+#Displays top 10 tags with the number of quotes the tag appeared in
 @app.route("/top10tags")
 def top10tags():
     top10tags_df = pd.read_sql_query(
@@ -237,14 +248,11 @@ def top10tags():
         cnt =  top10tags_df.to_dict('split')['data'][i][1]
 
         data = {
-            
             'tags' : tags,
             'quote_count' : cnt
         }
         top10.append(data)
     return jsonify(top10)
-
-
 
 
 if __name__ == "__main__":

@@ -26,11 +26,11 @@ app.config['JSON_SORT_KEYS'] = False
 
 # Database Setup
 connection = psycopg2.connect(user = "postgres",
-                                  password = "Isla",
+                                  password = "postgres",
                                   host = "127.0.0.1",
                                   port = "5432",
                                   database = "quotes_db")
-db_string = "postgres://postgres:Isla@localhost:5432/quotes_db"
+db_string = "postgres://postgres:postgres@localhost:5432/quotes_db"
 engine = connection.cursor()
 db = create_engine(db_string)
 
